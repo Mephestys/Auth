@@ -19,6 +19,19 @@ server.use(
   })
 );
 
+const restrictedAccess = (req, res, next) => {
+  const path = req.path;
+  if (/restricted/.test(path)) {
+    if (!req.session.isAuth) {
+      sendUserError('User is not authorized.', res);
+      return;
+    }
+  }
+  next();
+};
+
+server.use(restrictedAccess);
+
 /* Sends the given err, a string or an object, to the client. Sets the status
  * code appropriately. */
 const sendUserError = (err, res) => {
@@ -54,15 +67,14 @@ server.post('/log-in', (req, res) => {
   User.findOne({ username: username.toLowerCase() })
     .then(foundUser => {
       if (!foundUser) {
-        sendUserError('No user found with the username');
+        sendUserError('No user found with the username', res);
       } else {
         let cb = function(err, isMatch) {
           res.json({ success: isMatch });
         };
         foundUser.checkPassword(password, cb);
-        req.session.username = username;
+        req.session.username = username.toLowerCase();
         req.session.isAuth = true;
-        console.log(req.session);
       }
     })
     .catch(err => sendUserError(err, res));
@@ -75,7 +87,6 @@ const validateUser = (req, res, next) => {
       // .select('username passwordHash -_id')
       .then(user => {
         req.user = user;
-        console.log(req.user);
         next();
       })
       .catch(err => {
@@ -83,6 +94,8 @@ const validateUser = (req, res, next) => {
       });
   }
 };
+
+
 
 server.get('/me', validateUser, (req, res) => {
   // Do NOT modify this route handler in any way.
