@@ -3,13 +3,20 @@
 const bodyParser = require('body-parser');
 const express = require('express');
 const session = require('express-session');
-
+const cors = require('cors');
 const User = require('./user.js');
+
+const corsOptions = {
+  "origin": "http://localhost:3000",
+  "credentials": true
+};
+
 
 const STATUS_USER_ERROR = 422;
 
 const server = express();
 
+server.use(cors(corsOptions));
 server.use(bodyParser.json());
 server.use(session({
   secret: 'e5SPiqsEtjexkTj3Xqovsjzq8ovjfgVDFMfUzSmJO21dtXs4re',
@@ -52,7 +59,7 @@ server.post('/users', (req, res) => {
   }
 });
 
-server.post('/log-in', (req, res) => {
+server.post('/login', (req, res) => {
   let username = req.body.username;
   const password = req.body.password;
   if (!username || !password) {
@@ -70,6 +77,19 @@ server.post('/log-in', (req, res) => {
     .catch(err => sendUserError('User does not exist in the system.', res));
   }
 });
+
+server.post('/logout', (req, res) => {
+  const username = req.body.username.toLowerCase();
+  if (!username) {
+    sendUserError('Need a username', res);
+  } else if (username !== req.session.username){
+    sendUserError('That user is not logged in')
+  } else {
+    req.session.username = '';
+    req.session.isAuth = false;
+    res.json({ success: 'User is logged out' });
+  }
+})
 
 const validUser = (req, res, next) => {
   if (!req.session.isAuth) sendUserError('Not logged in.', res);
