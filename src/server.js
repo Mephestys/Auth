@@ -1,4 +1,4 @@
-/* eslint-disable func-names, prefer-arrow-callback */
+/* eslint-disable */
 
 const bodyParser = require('body-parser');
 const express = require('express');
@@ -7,10 +7,9 @@ const cors = require('cors');
 const User = require('./user.js');
 
 const corsOptions = {
-  "origin": "http://localhost:3000",
-  "credentials": true
+  origin: 'http://localhost:3000',
+  credentials: true,
 };
-
 
 const STATUS_USER_ERROR = 422;
 
@@ -18,11 +17,13 @@ const server = express();
 
 server.use(cors(corsOptions));
 server.use(bodyParser.json());
-server.use(session({
-  secret: 'e5SPiqsEtjexkTj3Xqovsjzq8ovjfgVDFMfUzSmJO21dtXs4re',
-  resave: true,
-  saveUninitialized: false,
-}));
+server.use(
+  session({
+    secret: 'e5SPiqsEtjexkTj3Xqovsjzq8ovjfgVDFMfUzSmJO21dtXs4re',
+    resave: true,
+    saveUninitialized: false,
+  }),
+);
 
 const sendUserError = (err, res) => {
   res.status(STATUS_USER_ERROR);
@@ -53,7 +54,8 @@ server.post('/users', (req, res) => {
   } else {
     const createdUser = { username, passwordHash: password };
     const newUser = new User(createdUser);
-    newUser.save()
+    newUser
+      .save()
       .then(savedUser => res.json(savedUser))
       .catch(err => sendUserError(err, res));
   }
@@ -66,15 +68,16 @@ server.post('/login', (req, res) => {
     sendUserError('Username and password required', res);
   } else {
     username = username.toLowerCase();
-    User.findOne({ username }).then((user) => {
-      user.checkPassword(password, function (err, validated) {
-        if (!validated) return sendUserError('Password does not match', res);
-        req.session.username = username;
-        req.session.isAuth = true;
-        res.json({ success: validated });
-      });
-    })
-    .catch(err => sendUserError('User does not exist in the system.', res));
+    User.findOne({ username })
+      .then(user => {
+        user.checkPassword(password, function(err, validated) {
+          if (!validated) return sendUserError('Password does not match', res);
+          req.session.username = username;
+          req.session.isAuth = true;
+          res.json({ success: validated });
+        });
+      })
+      .catch(err => sendUserError('User does not exist in the system.', res));
   }
 });
 
@@ -82,24 +85,24 @@ server.post('/logout', (req, res) => {
   const username = req.body.username.toLowerCase();
   if (!username) {
     sendUserError('Need a username', res);
-  } else if (username !== req.session.username){
-    sendUserError('That user is not logged in')
+  } else if (username !== req.session.username) {
+    sendUserError('That user is not logged in');
   } else {
     req.session.username = '';
     req.session.isAuth = false;
     res.json({ success: 'User is logged out' });
   }
-})
+});
 
 const validUser = (req, res, next) => {
   if (!req.session.isAuth) sendUserError('Not logged in.', res);
   else {
     User.findOne({ username: req.session.username })
-      .then((user) => {
+      .then(user => {
         req.user = user;
         next();
       })
-      .catch((err) => {
+      .catch(err => {
         res.status(500).json({ error: err });
       });
   }
